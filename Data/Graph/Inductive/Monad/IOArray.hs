@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts#-}
 
 -- (c) 2002 by Martin Erwig [see file COPYRIGHT]
 -- | Static IOArray-based Graphs
@@ -109,6 +109,3 @@ emptyN n = do m <- newArray (1,n) False
 -- representing deleted marks
 removeDel :: IOArray Node Bool -> Adj b -> IO (Adj b)
 removeDel m = filterM (\(_,v)->do {b<-readArray m v;return (not b)})
-
-
-

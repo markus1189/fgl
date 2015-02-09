@@ -51,5 +51,5 @@ library {
     other-modules:
         Paths_fgl
 
-    build-depends:    base < 4.8, mtl, containers, array
+    build-depends:    base < 4.9, mtl, containers, array
 }
