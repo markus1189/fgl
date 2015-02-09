@@ -1,4 +1,5 @@
 -- (c) 2002 by Martin Erwig [see file COPYRIGHT]
+{-# LANGUAGE DeriveFunctor, TupleSections #-}
 -- | Monadic Graph Algorithms
 
 module Data.Graph.Inductive.Query.Monad(
@@ -27,7 +28,8 @@ module Data.Graph.Inductive.Query.Monad(
 --
 
 import Data.Tree
---import Control.Monad (liftM)
+import Control.Monad (ap)
+import Control.Applicative
 
 import Data.Graph.Inductive.Graph
 import Data.Graph.Inductive.Monad
@@ -51,27 +53,30 @@ orP p q (x,y) = p x || q y
 -- monadic graph transformer monad
 ----------------------------------------------------------------------
 
-data GT m g a = MGT (m g -> m (a,g))
+data GT m g a = MGT (m g -> m (a,g)) deriving (Functor)
 
 apply :: GT m g a -> m g -> m (a,g)
 apply (MGT f) mg = f mg
 
-apply' :: Monad m => GT m g a -> g -> m (a,g)
-apply' gt = apply gt . return
+apply' :: Applicative m => GT m g a -> g -> m (a,g)
+apply' gt = apply gt . pure
 
-applyWith :: Monad m => (a -> b) -> GT m g a -> m g -> m (b,g)
-applyWith h (MGT f) gm = do {(x,g) <- f gm; return (h x,g)}
+applyWith :: Functor m => (a -> b) -> GT m g a -> m g -> m (b,g)
+applyWith h (MGT f) gm = fmap (mapFst h) (f gm)
 
-applyWith' :: Monad m => (a -> b) -> GT m g a -> g -> m (b,g)
-applyWith' h gt = applyWith h gt . return
+applyWith' :: Applicative m => (a -> b) -> GT m g a -> g -> m (b,g)
+applyWith' h gt = applyWith h gt . pure
 
-runGT :: Monad m => GT m g a -> m g -> m a
-runGT gt mg = do {(x,_) <- apply gt mg; return x}
-
+runGT :: Functor m => GT m g a -> m g -> m a
+runGT gt mg = fmap fst (apply gt mg)
 
 instance Monad m => Monad (GT m g) where
-  return x = MGT (\mg->do {g<-mg; return (x,g)})
-  f >>= h  = MGT (\mg->do {(x,g)<-apply f mg; apply' (h x) g})
+  return x = MGT (fmap (x,))
+  f >>= h  = MGT (\mg->do (x,g) <- apply f mg
+                          apply' (h x) g)
+instance Monad m => Applicative (GT m g) where
+  pure = pure
+  (<*>) = ap
 
 condMGT' :: Monad m => (s -> Bool) -> GT m s a -> GT m s a -> GT m s a
 condMGT' p f g = MGT (\mg->do {h<-mg; if p h then apply f mg else apply g mg})
